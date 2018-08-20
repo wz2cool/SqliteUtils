@@ -65,3 +65,6 @@ dist
 bin
 
 obj
+/.vs/SqliteUtils/v15
+/packages
+/SqliteUtils/.vs/SqliteUtils/v15
