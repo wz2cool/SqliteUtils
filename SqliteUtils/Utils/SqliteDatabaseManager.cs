@@ -5,6 +5,8 @@ using System.Collections.Generic;
 using System.Data.SQLite;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
+using System.Security;
 using System.Text;
 
 namespace SqliteUtils.Utils
@@ -14,13 +16,15 @@ namespace SqliteUtils.Utils
         private readonly string _dbFilePath;
         private readonly string _connectionString;
         private readonly object _dbLocker = new object();
+        private readonly byte[] _password;
         private readonly string _tableVersionName = "table_version";
         private bool _isInit = false;
 
-        public SqliteDatabaseManager(string dbFilePath)
+        public SqliteDatabaseManager(string dbFilePath, byte[] password)
         {
             _dbFilePath = Path.GetFullPath(dbFilePath);
             _connectionString = string.Format("data source = \"{0}\"", _dbFilePath);
+            _password = password;
         }
 
         public void Initialize()
@@ -40,6 +44,7 @@ namespace SqliteUtils.Utils
             {
                 using (var conn = new SQLiteConnection(_connectionString))
                 {
+                    conn.SetPassword(_password);
                     conn.Open();
                     using (SQLiteCommand cmd = new SQLiteCommand(conn))
                     {
@@ -69,6 +74,7 @@ namespace SqliteUtils.Utils
                 string sqlExpression = wrapper.SqlExpression;
                 using (var conn = new SQLiteConnection(_connectionString))
                 {
+                    conn.SetPassword(_password);
                     conn.Open();
                     using (SQLiteCommand cmd = new SQLiteCommand(sqlExpression, conn))
                     {
@@ -91,6 +97,7 @@ namespace SqliteUtils.Utils
                 string sqlExpression = wrapper.SqlExpression;
                 using (var conn = new SQLiteConnection(_connectionString))
                 {
+                    conn.SetPassword(_password);
                     conn.Open();
                     using (SQLiteCommand cmd = new SQLiteCommand(sqlExpression, conn))
                     {
@@ -111,6 +118,7 @@ namespace SqliteUtils.Utils
                 IEnumerable<SqliteSqlTemplate> wrapper = GetSqliteSqlTemplates(sqlTemplates);
                 using (var conn = new SQLiteConnection(_connectionString))
                 {
+                    conn.SetPassword(_password);
                     conn.Open();
                     using (SQLiteCommand cmd = new SQLiteCommand(conn))
                     using (var transaction = conn.BeginTransaction())
@@ -150,6 +158,7 @@ namespace SqliteUtils.Utils
                 List<Dictionary<string, object>> result = new List<Dictionary<string, object>>();
                 using (var conn = new SQLiteConnection(_connectionString))
                 {
+                    conn.SetPassword(_password);
                     conn.Open();
                     using (SQLiteCommand cmd = new SQLiteCommand(sqlExpression, conn))
                     {
@@ -268,6 +277,7 @@ namespace SqliteUtils.Utils
                     Directory.CreateDirectory(dir);
                 }
                 SQLiteConnection.CreateFile(dbFilePath);
+                EncryptDatabase();
             }
         }
 
@@ -299,6 +309,15 @@ namespace SqliteUtils.Utils
             sqlTemplate.SqlExpression = sql;
             sqlTemplate.Params = new object[] { tableName, version };
             return ExecuteDML(new SqlTemplate[] { sqlTemplate });
+        }
+
+        private void EncryptDatabase()
+        {
+            using (var conn = new SQLiteConnection(_connectionString))
+            {
+                conn.Open();
+                conn.ChangePassword(_password);
+            }
         }
     }
 }

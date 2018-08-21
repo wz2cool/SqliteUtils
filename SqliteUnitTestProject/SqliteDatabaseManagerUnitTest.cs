@@ -5,6 +5,7 @@ using SqliteUtils.Models;
 using SqliteUtils.Utils;
 using System.Linq;
 using System.Collections.Generic;
+using System.Text;
 
 namespace SqliteUnitTestProject
 {
@@ -13,6 +14,7 @@ namespace SqliteUnitTestProject
     {
         private readonly SqliteDatabaseManager _manager;
         private readonly string dbFile = "test.db";
+        private readonly byte[] _password;
 
         public SqliteDatabaseManagerUnitTest()
         {
@@ -20,8 +22,8 @@ namespace SqliteUnitTestProject
             {
                 File.Delete(dbFile);
             }
-
-            _manager = new SqliteDatabaseManager("test.db");
+            _password = Encoding.ASCII.GetBytes("test");
+            _manager = new SqliteDatabaseManager("test.db", _password);
         }
 
         [TestMethod]
@@ -52,7 +54,7 @@ namespace SqliteUnitTestProject
             DeleteDatabase(dbFilepath);
             try
             {
-                var manager = new SqliteDatabaseManager(dbFilepath);
+                var manager = new SqliteDatabaseManager(dbFilepath, _password);
                 PrivateObject obj = new PrivateObject(manager);
                 var r1 = obj.Invoke("CreateDatabaseIfNotExists", Path.GetFullPath(dbFilepath));
                 var r2 = obj.Invoke("CreateTableVersionIfNotExists");
@@ -71,7 +73,7 @@ namespace SqliteUnitTestProject
             DeleteDatabase(dbFilepath);
             try
             {
-                var manager = new SqliteDatabaseManager(dbFilepath);
+                var manager = new SqliteDatabaseManager(dbFilepath, _password);
                 manager.Initialize();
                 PrivateObject obj = new PrivateObject(manager);
                 obj.Invoke("UpdateTableVersion", "test", 99);
@@ -91,7 +93,7 @@ namespace SqliteUnitTestProject
             DeleteDatabase(dbFilepath);
             try
             {
-                var manager = new SqliteDatabaseManager(dbFilepath);
+                var manager = new SqliteDatabaseManager(dbFilepath, _password);
                 manager.Initialize();
 
                 CreateTableTemplate createTableTemplate = new CreateTableTemplate();
@@ -128,7 +130,7 @@ namespace SqliteUnitTestProject
             DeleteDatabase(dbFilepath);
             try
             {
-                var manager = new SqliteDatabaseManager(dbFilepath);
+                var manager = new SqliteDatabaseManager(dbFilepath, _password);
                 manager.Initialize();
                 CreateTableTemplate createTableTemplate = new CreateTableTemplate();
                 createTableTemplate.TableName = "student";
@@ -168,7 +170,7 @@ namespace SqliteUnitTestProject
             DeleteDatabase(dbFilepath);
             try
             {
-                var manager = new SqliteDatabaseManager(dbFilepath);
+                var manager = new SqliteDatabaseManager(dbFilepath, _password);
                 manager.Initialize();
                 CreateTableTemplate createTableTemplate = new CreateTableTemplate();
                 createTableTemplate.TableName = "student";
