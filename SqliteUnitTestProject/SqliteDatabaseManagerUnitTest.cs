@@ -4,6 +4,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using SqliteUtils.Models;
 using SqliteUtils.Utils;
 using System.Linq;
+using System.Collections.Generic;
 
 namespace SqliteUnitTestProject
 {
@@ -105,7 +106,6 @@ namespace SqliteUnitTestProject
                 var version = manager.GetTableVersion("student");
                 Assert.AreEqual(1, version);
 
-
                 createTableTemplate.CreateSql = string.Format("CREATE TABLE IF NOT EXISTS {0}(", "student") +
                     "name varchar(100) PRIMARY KEY," +
                     "age INTEGER," +
@@ -114,6 +114,46 @@ namespace SqliteUnitTestProject
                 obj.Invoke("CreateTableIfNotExists", createTableTemplate);
                 version = manager.GetTableVersion("student");
                 Assert.AreEqual(2, version);
+            }
+            finally
+            {
+                DeleteDatabase(dbFilepath);
+            }
+        }
+
+        [TestMethod]
+        public void TestBulkInserts()
+        {
+            string dbFilepath = "my.db";
+            DeleteDatabase(dbFilepath);
+            try
+            {
+                var manager = new SqliteDatabaseManager(dbFilepath);
+                manager.Initialize();
+                CreateTableTemplate createTableTemplate = new CreateTableTemplate();
+                createTableTemplate.TableName = "student";
+                createTableTemplate.Version = 1;
+                createTableTemplate.CreateSql = string.Format("CREATE TABLE IF NOT EXISTS {0}(", "student") +
+                    "name varchar(100) PRIMARY KEY," +
+                    "age INTEGER)";
+
+                PrivateObject obj = new PrivateObject(manager);
+                obj.Invoke("CreateTableIfNotExists", createTableTemplate);
+                var version = manager.GetTableVersion("student");
+                Assert.AreEqual(1, version);
+
+                List<SqlTemplate> sqlTemplates = new List<SqlTemplate>();
+                for (int i = 0; i < 1000; i++)
+                {
+                    SqlTemplate sqlTemplate = new SqlTemplate();
+                    string sql = string.Format("INSERT INTO student values(?, ?)");
+                    sqlTemplate.SqlExpression = sql;
+                    sqlTemplate.Params = new object[] { "student" + i, 20 };
+                    sqlTemplates.Add(sqlTemplate);
+                }
+
+                int result = manager.ExecuteDML(sqlTemplates);
+                Assert.AreEqual(1000, result);
             }
             finally
             {
