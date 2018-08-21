@@ -61,13 +61,12 @@ namespace SqliteUtils.Utils
             }
         }
 
-        public int ExecuteSql(SqlTemplate sqlTemplate)
+        public int ExecuteNonQuery(SqlTemplate sqlTemplate)
         {
             lock (_dbLocker)
             {
                 SqliteSqlTemplate wrapper = GetSqliteSqlTemplate(sqlTemplate);
                 string sqlExpression = wrapper.SqlExpression;
-                List<Dictionary<string, object>> result = new List<Dictionary<string, object>>();
                 using (var conn = new SQLiteConnection(_connectionString))
                 {
                     conn.Open();
@@ -79,6 +78,27 @@ namespace SqliteUtils.Utils
                         }
                         int effectRows = cmd.ExecuteNonQuery();
                         return effectRows;
+                    }
+                }
+            }
+        }
+
+        public object ExecuteScalar(SqlTemplate sqlTemplate)
+        {
+            lock (_dbLocker)
+            {
+                SqliteSqlTemplate wrapper = GetSqliteSqlTemplate(sqlTemplate);
+                string sqlExpression = wrapper.SqlExpression;
+                using (var conn = new SQLiteConnection(_connectionString))
+                {
+                    conn.Open();
+                    using (SQLiteCommand cmd = new SQLiteCommand(sqlExpression, conn))
+                    {
+                        if (wrapper.Params != null && wrapper.Params.Length > 0)
+                        {
+                            cmd.Parameters.AddRange(wrapper.Params.ToArray());
+                        }
+                        return cmd.ExecuteScalar();
                     }
                 }
             }
