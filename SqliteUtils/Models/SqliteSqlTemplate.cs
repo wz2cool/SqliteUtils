@@ -9,6 +9,6 @@ namespace SqliteUtils.Models
     public class SqliteSqlTemplate
     {
         public string SqlExpression { get; set; }
-        public IEnumerable<SQLiteParameter> Params { get; set; }
+        public SQLiteParameter[] Params { get; set; }
     }
 }

@@ -97,7 +97,7 @@ namespace SqliteUtils.Utils
             SqliteSqlTemplate result = new SqliteSqlTemplate();
             result.SqlExpression = sqlTemplate.SqlExpression;
             List<SQLiteParameter> newParams = new List<SQLiteParameter>();
-            result.Params = newParams;
+
             if (string.IsNullOrWhiteSpace(sqlTemplate.SqlExpression) || sqlTemplate.Params == null || sqlTemplate.Params.Length == 0)
             {
                 return result;
@@ -117,6 +117,7 @@ namespace SqliteUtils.Utils
             }
 
             result.SqlExpression = sqlExpression;
+            result.Params = newParams.ToArray();
             return result;
         }
 
