@@ -128,7 +128,7 @@ namespace SqliteUtils.Utils
             {
                 if (File.Exists(dbFilePath)) return;
 
-                string dir = Path.GetDirectoryName(_dbFilePath);
+                string dir = Path.GetDirectoryName(dbFilePath);
                 if (!Directory.Exists(dir))
                 {
                     Directory.CreateDirectory(dir);

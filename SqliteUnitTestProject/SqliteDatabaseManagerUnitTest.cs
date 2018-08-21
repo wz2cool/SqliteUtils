@@ -43,5 +43,15 @@ namespace SqliteUnitTestProject
                 Assert.AreEqual(sqlTemplate.Params[i], param.Value);
             }
         }
+
+        [TestMethod]
+        public void TestCreateDatabaseDirIfNotExists()
+        {
+            PrivateObject obj = new PrivateObject(_manager);
+
+            string dbFilepath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "test", "test.db");
+            obj.Invoke("CreateDatabaseDirIfNotExists", dbFilepath);
+            Assert.AreEqual(true, Directory.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "test")));
+        }
     }
 }
