@@ -153,7 +153,10 @@ namespace SqliteUtils.Utils
                     conn.Open();
                     using (SQLiteCommand cmd = new SQLiteCommand(sqlExpression, conn))
                     {
-                        cmd.Parameters.AddRange(wrapper.Params.ToArray());
+                        if (wrapper.Params != null && wrapper.Params.Length > 0)
+                        {
+                            cmd.Parameters.AddRange(wrapper.Params.ToArray());
+                        }
                         using (var rdr = cmd.ExecuteReader())
                         {
                             while (rdr.Read())
@@ -169,6 +172,27 @@ namespace SqliteUtils.Utils
                     }
                 }
                 return result;
+            }
+        }
+
+        public int CreateTableIfNotExists(CreateTableTemplate createTableTemplate)
+        {
+            lock (_dbLocker)
+            {
+                string tableName = createTableTemplate.TableName;
+                int version = createTableTemplate.Version;
+                string createSql = createTableTemplate.CreateSql;
+                int dbTableVersion = GetTableVersion(tableName);
+                if (version > dbTableVersion)
+                {
+                    SqlTemplate sqlTemplate = new SqlTemplate();
+                    sqlTemplate.SqlExpression = createTableTemplate.CreateSql;
+                    return ExecuteNonQuery(sqlTemplate);
+                }
+                else
+                {
+                    return 0;
+                }
             }
         }
 

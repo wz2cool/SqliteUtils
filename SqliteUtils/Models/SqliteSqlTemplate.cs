@@ -10,5 +10,10 @@ namespace SqliteUtils.Models
     {
         public string SqlExpression { get; set; }
         public SQLiteParameter[] Params { get; set; }
+
+        public SqliteSqlTemplate()
+        {
+            this.Params = new SQLiteParameter[0];
+        }
     }
 }

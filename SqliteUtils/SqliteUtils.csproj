@@ -49,6 +49,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Models\CreateTableTemplate.cs" />
     <Compile Include="Models\SqliteSqlTemplate.cs" />
     <Compile Include="Models\SqlTemplate.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
