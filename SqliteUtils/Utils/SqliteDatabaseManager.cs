@@ -19,8 +19,8 @@ namespace SqliteUtils.Utils
 
         public SqliteDatabaseManager(string dbFilePath)
         {
-            _dbFilePath = dbFilePath;
-            _connectionString = string.Format("data source = {0}", dbFilePath);
+            _dbFilePath = Path.GetFullPath(dbFilePath);
+            _connectionString = string.Format("data source = \"{0}\"", _dbFilePath);
         }
 
         public void Initialize()
@@ -28,7 +28,7 @@ namespace SqliteUtils.Utils
             lock (_dbLocker)
             {
                 if (_isInit) return;
-                CreateDatabaseDirIfNotExists(_dbFilePath);
+                CreateDatabaseIfNotExists(_dbFilePath);
                 CreateTableVersionIfNotExists();
                 _isInit = true;
             }
@@ -72,11 +72,12 @@ namespace SqliteUtils.Utils
                 {
                     conn.Open();
                     using (SQLiteCommand cmd = new SQLiteCommand(sqlExpression, conn))
-                    using (var transaction = conn.BeginTransaction())
                     {
-                        cmd.Parameters.AddRange(wrapper.Params.ToArray());
+                        if (wrapper.Params != null && wrapper.Params.Length > 0)
+                        {
+                            cmd.Parameters.AddRange(wrapper.Params.ToArray());
+                        }
                         int effectRows = cmd.ExecuteNonQuery();
-                        transaction.Commit();
                         return effectRows;
                     }
                 }
@@ -101,7 +102,10 @@ namespace SqliteUtils.Utils
                             {
                                 cmd.CommandText = item.SqlExpression;
                                 cmd.Parameters.Clear();
-                                cmd.Parameters.AddRange(item.Params.ToArray());
+                                if (item.Params != null && item.Params.Length > 0)
+                                {
+                                    cmd.Parameters.AddRange(item.Params.ToArray());
+                                }
                                 effectRows += cmd.ExecuteNonQuery();
                             }
                             transaction.Commit();
@@ -204,7 +208,7 @@ namespace SqliteUtils.Utils
         }
 
 
-        private void CreateDatabaseDirIfNotExists(string dbFilePath)
+        private void CreateDatabaseIfNotExists(string dbFilePath)
         {
             lock (_dbLocker)
             {
@@ -215,6 +219,7 @@ namespace SqliteUtils.Utils
                 {
                     Directory.CreateDirectory(dir);
                 }
+                SQLiteConnection.CreateFile(dbFilePath);
             }
         }
 

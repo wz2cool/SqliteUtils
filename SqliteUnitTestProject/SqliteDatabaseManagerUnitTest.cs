@@ -56,8 +56,22 @@ namespace SqliteUnitTestProject
         [TestMethod]
         public void TestCreateTableVersionIfNotExists()
         {
-            DropTableVersion();
-            PrivateObject obj = new PrivateObject(_manager);
+            string dbFilepath = "my.db";
+            DeleteDatabase(dbFilepath);
+            var manager = new SqliteDatabaseManager(dbFilepath);
+            PrivateObject obj = new PrivateObject(manager);
+            obj.Invoke("CreateDatabaseIfNotExists", Path.GetFullPath(dbFilepath));
+            obj.Invoke("CreateTableVersionIfNotExists");
+
+            Assert.AreEqual(true, IsTableExists(manager, "table_verison"));
+        }
+
+        public void DeleteDatabase(string dbFilePath)
+        {
+            if (File.Exists(dbFilePath))
+            {
+                File.Delete(dbFilePath);
+            }
         }
 
         private void DropTableVersion()
@@ -68,5 +82,12 @@ namespace SqliteUnitTestProject
             this._manager.ExecuteSql(sqlTemplate);
         }
 
+        private bool IsTableExists(SqliteDatabaseManager manager, string tableName)
+        {
+            string sql = "SELECT count(0) FROM sqlite_master WHERE type='table' AND name='" + tableName + "'";
+            SqlTemplate sqlTemplate = new SqlTemplate();
+            sqlTemplate.SqlExpression = sql;
+            return manager.ExecuteSql(sqlTemplate) == 1;
+        }
     }
 }
