@@ -44,29 +44,84 @@ namespace SqliteUnitTestProject
             }
         }
 
-        //[TestMethod]
-        //public void TestCreateDatabaseDirIfNotExists()
-        //{
-        //    PrivateObject obj = new PrivateObject(_manager);
-        //    string dbFilepath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "test", "test.db");
-        //    obj.Invoke("CreateDatabaseDirIfNotExists", dbFilepath);
-        //    Assert.AreEqual(true, Directory.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "test")));
-        //}
-
         [TestMethod]
         public void TestCreateTableVersionIfNotExists()
         {
             string dbFilepath = "my.db";
             DeleteDatabase(dbFilepath);
-            var manager = new SqliteDatabaseManager(dbFilepath);
-            PrivateObject obj = new PrivateObject(manager);
-            var r1 = obj.Invoke("CreateDatabaseIfNotExists", Path.GetFullPath(dbFilepath));
-            var r2 = obj.Invoke("CreateTableVersionIfNotExists");
-
-            Assert.AreEqual(true, IsTableExists(manager, "table_version"));
+            try
+            {
+                var manager = new SqliteDatabaseManager(dbFilepath);
+                PrivateObject obj = new PrivateObject(manager);
+                var r1 = obj.Invoke("CreateDatabaseIfNotExists", Path.GetFullPath(dbFilepath));
+                var r2 = obj.Invoke("CreateTableVersionIfNotExists");
+                Assert.AreEqual(true, IsTableExists(manager, "table_version"));
+            }
+            finally
+            {
+                DeleteDatabase(dbFilepath);
+            }
         }
 
-        public void DeleteDatabase(string dbFilePath)
+        [TestMethod]
+        public void TestUpdateTableVersion()
+        {
+            string dbFilepath = "my.db";
+            DeleteDatabase(dbFilepath);
+            try
+            {
+                var manager = new SqliteDatabaseManager(dbFilepath);
+                manager.Initialize();
+                PrivateObject obj = new PrivateObject(manager);
+                obj.Invoke("UpdateTableVersion", "test", 99);
+                var version = manager.GetTableVersion("test");
+                Assert.AreEqual(99, version);
+            }
+            finally
+            {
+                DeleteDatabase(dbFilepath);
+            }
+        }
+
+        [TestMethod]
+        public void TestCreateTableIfNotExists()
+        {
+            string dbFilepath = "my.db";
+            DeleteDatabase(dbFilepath);
+            try
+            {
+                var manager = new SqliteDatabaseManager(dbFilepath);
+                manager.Initialize();
+
+                CreateTableTemplate createTableTemplate = new CreateTableTemplate();
+                createTableTemplate.TableName = "student";
+                createTableTemplate.Version = 1;
+                createTableTemplate.CreateSql = string.Format("CREATE TABLE IF NOT EXISTS {0}(", "student") +
+                    "name varchar(100) PRIMARY KEY," +
+                    "age INTEGER)";
+
+                PrivateObject obj = new PrivateObject(manager);
+                obj.Invoke("CreateTableIfNotExists", createTableTemplate);
+                var version = manager.GetTableVersion("student");
+                Assert.AreEqual(1, version);
+
+
+                createTableTemplate.CreateSql = string.Format("CREATE TABLE IF NOT EXISTS {0}(", "student") +
+                    "name varchar(100) PRIMARY KEY," +
+                    "age INTEGER," +
+                    "classroom varchar(100))";
+                createTableTemplate.Version = 2;
+                obj.Invoke("CreateTableIfNotExists", createTableTemplate);
+                version = manager.GetTableVersion("student");
+                Assert.AreEqual(2, version);
+            }
+            finally
+            {
+                DeleteDatabase(dbFilepath);
+            }
+        }
+
+        private void DeleteDatabase(string dbFilePath)
         {
             if (File.Exists(dbFilePath))
             {

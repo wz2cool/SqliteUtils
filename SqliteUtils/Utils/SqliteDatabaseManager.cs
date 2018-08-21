@@ -185,9 +185,13 @@ namespace SqliteUtils.Utils
                 int dbTableVersion = GetTableVersion(tableName);
                 if (version > dbTableVersion)
                 {
-                    SqlTemplate sqlTemplate = new SqlTemplate();
-                    sqlTemplate.SqlExpression = createTableTemplate.CreateSql;
-                    return ExecuteNonQuery(sqlTemplate);
+                    int effectRows = 0;
+                    SqlTemplate createSqlTemplate = new SqlTemplate();
+                    createSqlTemplate.SqlExpression = createTableTemplate.CreateSql;
+                    effectRows += DropTableIfExists(tableName);
+                    effectRows += ExecuteNonQuery(createSqlTemplate);
+                    effectRows += UpdateTableVersion(tableName, version);
+                    return effectRows;
                 }
                 else
                 {
@@ -269,22 +273,32 @@ namespace SqliteUtils.Utils
 
         private int CreateTableVersionIfNotExists()
         {
-            lock (_dbLocker)
-            {
-                string sql = string.Format("CREATE TABLE IF NOT EXISTS {0}(", _tableVersionName) +
-                   "table_name varchar(100) PRIMARY KEY," +
-                   "version INTEGER)";
+            string sql = string.Format("CREATE TABLE IF NOT EXISTS {0}(", _tableVersionName) +
+               "table_name varchar(100) PRIMARY KEY," +
+               "version INTEGER)";
 
-                using (var conn = new SQLiteConnection(_connectionString))
-                {
-                    conn.Open();
-                    using (SQLiteCommand cmd = new SQLiteCommand(conn))
-                    {
-                        cmd.CommandText = sql;
-                        return cmd.ExecuteNonQuery();
-                    }
-                }
-            }
+            SqlTemplate sqlTemplate = new SqlTemplate();
+            sqlTemplate.SqlExpression = sql;
+            return ExecuteNonQuery(sqlTemplate);
+
+        }
+
+        private int DropTableIfExists(string tableName)
+        {
+            string sql = string.Format("DROP TABLE IF EXISTS {0}", tableName);
+            SqlTemplate sqlTemplate = new SqlTemplate();
+            sqlTemplate.SqlExpression = sql;
+            return ExecuteNonQuery(sqlTemplate);
+        }
+
+        private int UpdateTableVersion(string tableName, int version)
+        {
+            string sql = string.Format("INSERT OR REPLACE INTO {0}(table_name, version) VALUES(?, ?)",
+                _tableVersionName);
+            SqlTemplate sqlTemplate = new SqlTemplate();
+            sqlTemplate.SqlExpression = sql;
+            sqlTemplate.Params = new object[] { tableName, version };
+            return ExecuteDML(new SqlTemplate[] { sqlTemplate });
         }
     }
 }
