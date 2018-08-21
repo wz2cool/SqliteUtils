@@ -61,6 +61,62 @@ namespace SqliteUtils.Utils
             }
         }
 
+        public int ExecuteSql(SqlTemplate sqlTemplate)
+        {
+            lock (_dbLocker)
+            {
+                SqliteSqlTemplate wrapper = GetSqliteSqlTemplate(sqlTemplate);
+                string sqlExpression = wrapper.SqlExpression;
+                List<Dictionary<string, object>> result = new List<Dictionary<string, object>>();
+                using (var conn = new SQLiteConnection(_connectionString))
+                {
+                    conn.Open();
+                    using (SQLiteCommand cmd = new SQLiteCommand(sqlExpression, conn))
+                    using (var transaction = conn.BeginTransaction())
+                    {
+                        cmd.Parameters.AddRange(wrapper.Params.ToArray());
+                        int effectRows = cmd.ExecuteNonQuery();
+                        transaction.Commit();
+                        return effectRows;
+                    }
+                }
+            }
+        }
+
+        public int ExecuteDML(IEnumerable<SqlTemplate> sqlTemplates)
+        {
+            lock (_dbLocker)
+            {
+                IEnumerable<SqliteSqlTemplate> wrapper = GetSqliteSqlTemplates(sqlTemplates);
+                using (var conn = new SQLiteConnection(_connectionString))
+                {
+                    conn.Open();
+                    using (SQLiteCommand cmd = new SQLiteCommand(conn))
+                    using (var transaction = conn.BeginTransaction())
+                    {
+                        try
+                        {
+                            int effectRows = 0;
+                            foreach (var item in wrapper)
+                            {
+                                cmd.CommandText = item.SqlExpression;
+                                cmd.Parameters.Clear();
+                                cmd.Parameters.AddRange(item.Params.ToArray());
+                                effectRows += cmd.ExecuteNonQuery();
+                            }
+                            transaction.Commit();
+                            return effectRows;
+                        }
+                        catch (Exception e)
+                        {
+                            transaction.Rollback();
+                            throw e;
+                        }
+                    }
+                }
+            }
+        }
+
         public IEnumerable<Dictionary<string, object>> QueryData(SqlTemplate sqlTemplate)
         {
             lock (_dbLocker)
@@ -92,8 +148,34 @@ namespace SqliteUtils.Utils
             }
         }
 
+        private IEnumerable<SqliteSqlTemplate> GetSqliteSqlTemplates(IEnumerable<SqlTemplate> sqlTemplates)
+        {
+            List<SqliteSqlTemplate> result = new List<SqliteSqlTemplate>();
+            if (sqlTemplates == null || sqlTemplates.Count() == 0)
+            {
+                return result;
+            }
+
+            foreach (var item in sqlTemplates)
+            {
+                var sqliteSqlTemplate = GetSqliteSqlTemplate(item);
+                if (sqliteSqlTemplate != null)
+                {
+                    result.Add(sqliteSqlTemplate);
+                }
+            }
+
+            return result;
+        }
+
         private SqliteSqlTemplate GetSqliteSqlTemplate(SqlTemplate sqlTemplate)
         {
+            if (sqlTemplate == null || string.IsNullOrWhiteSpace(sqlTemplate.SqlExpression))
+            {
+                // no need to execute value
+                return null;
+            }
+
             SqliteSqlTemplate result = new SqliteSqlTemplate();
             result.SqlExpression = sqlTemplate.SqlExpression;
             List<SQLiteParameter> newParams = new List<SQLiteParameter>();

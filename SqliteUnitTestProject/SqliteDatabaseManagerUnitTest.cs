@@ -48,10 +48,25 @@ namespace SqliteUnitTestProject
         public void TestCreateDatabaseDirIfNotExists()
         {
             PrivateObject obj = new PrivateObject(_manager);
-
             string dbFilepath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "test", "test.db");
             obj.Invoke("CreateDatabaseDirIfNotExists", dbFilepath);
             Assert.AreEqual(true, Directory.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "test")));
         }
+
+        [TestMethod]
+        public void TestCreateTableVersionIfNotExists()
+        {
+            DropTableVersion();
+            PrivateObject obj = new PrivateObject(_manager);
+        }
+
+        private void DropTableVersion()
+        {
+            string sql = "DROP TABLE IF EXISTS table_version";
+            SqlTemplate sqlTemplate = new SqlTemplate();
+            sqlTemplate.SqlExpression = sql;
+            this._manager.ExecuteSql(sqlTemplate);
+        }
+
     }
 }
