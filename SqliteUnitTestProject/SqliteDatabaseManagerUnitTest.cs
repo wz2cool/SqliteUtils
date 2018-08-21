@@ -161,6 +161,52 @@ namespace SqliteUnitTestProject
             }
         }
 
+        [TestMethod]
+        public void TestQueryData()
+        {
+            string dbFilepath = "my.db";
+            DeleteDatabase(dbFilepath);
+            try
+            {
+                var manager = new SqliteDatabaseManager(dbFilepath);
+                manager.Initialize();
+                CreateTableTemplate createTableTemplate = new CreateTableTemplate();
+                createTableTemplate.TableName = "student";
+                createTableTemplate.Version = 1;
+                createTableTemplate.CreateSql = string.Format("CREATE TABLE IF NOT EXISTS {0}(", "student") +
+                    "name varchar(100) PRIMARY KEY," +
+                    "age INTEGER)";
+
+                PrivateObject obj = new PrivateObject(manager);
+                obj.Invoke("CreateTableIfNotExists", createTableTemplate);
+                var version = manager.GetTableVersion("student");
+                Assert.AreEqual(1, version);
+
+                List<SqlTemplate> sqlTemplates = new List<SqlTemplate>();
+                for (int i = 0; i < 1000; i++)
+                {
+                    SqlTemplate sqlTemplate = new SqlTemplate();
+                    string sql = string.Format("INSERT INTO student values(?, ?)");
+                    sqlTemplate.SqlExpression = sql;
+                    sqlTemplate.Params = new object[] { "student" + i, 20 };
+                    sqlTemplates.Add(sqlTemplate);
+                }
+
+                int result = manager.ExecuteDML(sqlTemplates);
+                Assert.AreEqual(1000, result);
+
+                SqlTemplate querySqlTemplate = new SqlTemplate();
+                querySqlTemplate.SqlExpression = "SELECT * FROM student LIMIT 200";
+
+                var items = manager.QueryData(querySqlTemplate);
+                Assert.AreEqual(200, items.Count());
+            }
+            finally
+            {
+                DeleteDatabase(dbFilepath);
+            }
+        }
+
         private void DeleteDatabase(string dbFilePath)
         {
             if (File.Exists(dbFilePath))
