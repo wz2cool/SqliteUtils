@@ -6,6 +6,7 @@ using SqliteUtils.Utils;
 using System.Linq;
 using System.Collections.Generic;
 using System.Text;
+using Newtonsoft.Json;
 
 namespace SqliteUnitTestProject
 {
@@ -22,7 +23,7 @@ namespace SqliteUnitTestProject
             {
                 File.Delete(dbFile);
             }
-            _password = Encoding.ASCII.GetBytes("test");
+            _password = Encoding.UTF8.GetBytes("test");
             _manager = new SqliteDatabaseManager("test.db", _password);
         }
 
@@ -202,6 +203,73 @@ namespace SqliteUnitTestProject
 
                 var items = manager.QueryData(querySqlTemplate);
                 Assert.AreEqual(200, items.Count());
+            }
+            finally
+            {
+                DeleteDatabase(dbFilepath);
+            }
+        }
+
+        [TestMethod]
+        public void TestInsertOrReplaceDatas()
+        {
+            string dbFilepath = "my.db";
+            DeleteDatabase(dbFilepath);
+            try
+            {
+                var manager = new SqliteDatabaseManager(dbFilepath, _password);
+                manager.Initialize();
+                CreateTableTemplate createTableTemplate = new CreateTableTemplate();
+                createTableTemplate.TableName = "student";
+                createTableTemplate.Version = 1;
+                createTableTemplate.CreateSql = string.Format("CREATE TABLE IF NOT EXISTS {0}(", "student") +
+                    "name varchar(100) PRIMARY KEY," +
+                    "age INTEGER)";
+
+                PrivateObject obj = new PrivateObject(manager);
+                obj.Invoke("CreateTableIfNotExists", createTableTemplate);
+                var version = manager.GetTableVersion("student");
+                Assert.AreEqual(1, version);
+
+                string json = @"[
+  {
+    ""name"": ""marray"",
+    ""age"": 20
+  },
+  {
+    ""name"": ""Jack"",
+    ""age"": 21
+  }
+]";
+                TableInfo tableInfo = new TableInfo();
+                tableInfo.TableName = "student";
+                tableInfo.ColumnNames = new string[] { "name", "age" };
+
+                IEnumerable<Dictionary<string, object>> datas = JsonConvert.DeserializeObject<IEnumerable<Dictionary<string, object>>>(json);
+
+                var effectRows = manager.InsertOrReplaceDatas(tableInfo, datas);
+                Console.WriteLine("effectRows: " + effectRows);
+
+                SqlTemplate querySqlTemplate = new SqlTemplate();
+                querySqlTemplate.SqlExpression = "SELECT * FROM student";
+                var items = manager.QueryData(querySqlTemplate);
+                Assert.AreEqual(2, items.Count());
+
+                json = @"[
+  {
+    ""name"": ""Jack"",
+    ""age"": 30
+  }
+]";
+                datas = JsonConvert.DeserializeObject<IEnumerable<Dictionary<string, object>>>(json);
+                effectRows = manager.InsertOrReplaceDatas(tableInfo, datas);
+                Console.WriteLine("effectRows: " + effectRows);
+
+                querySqlTemplate = new SqlTemplate();
+                querySqlTemplate.SqlExpression = "SELECT * FROM student";
+                items = manager.QueryData(querySqlTemplate);
+                Assert.AreEqual(30.ToString(), items.Last()["age"].ToString());
+
             }
             finally
             {

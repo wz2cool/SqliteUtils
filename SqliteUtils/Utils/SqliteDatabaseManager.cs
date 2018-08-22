@@ -209,6 +209,37 @@ namespace SqliteUtils.Utils
             }
         }
 
+        public int InsertOrReplaceDatas(TableInfo tableInfo, IEnumerable<Dictionary<string, object>> datas)
+        {
+            string tableName = tableInfo.TableName;
+            string[] columeNames = tableInfo.ColumnNames;
+
+            List<SqlTemplate> sqlTemplates = new List<SqlTemplate>();
+            foreach (var data in datas)
+            {
+                var itemNames = new List<string>();
+                var itemParams = new List<object>();
+                foreach (var columnName in columeNames)
+                {
+                    if (data.ContainsKey(columnName))
+                    {
+                        itemNames.Add(columnName);
+                        itemParams.Add(data[columnName]);
+                    }
+                }
+
+                string columnsStr = string.Join(", ", itemNames);
+                var paramPlaceholderStr = string.Join(", ", itemNames.Select(x => "?"));
+                string sql = string.Format("INSERT OR REPLACE INTO {0} ({1}) VALUES ({2})", tableName, columnsStr, paramPlaceholderStr);
+
+                SqlTemplate sqlTemplate = new SqlTemplate();
+                sqlTemplate.SqlExpression = sql;
+                sqlTemplate.Params = itemParams.ToArray();
+                sqlTemplates.Add(sqlTemplate);
+            }
+            return ExecuteDML(sqlTemplates);
+        }
+
         private IEnumerable<SqliteSqlTemplate> GetSqliteSqlTemplates(IEnumerable<SqlTemplate> sqlTemplates)
         {
             List<SqliteSqlTemplate> result = new List<SqliteSqlTemplate>();
